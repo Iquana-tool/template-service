@@ -10,6 +10,25 @@ logger = logging.getLogger(__name__)
 _REGISTRATION_TOKEN = os.getenv("SERVICE_REGISTRATION_TOKEN", os.getenv("SERVICE_SECRET", "default-secret"))
 
 
+def _env_bool(name: str, default: bool) -> bool:
+    value = os.getenv(name)
+    if value is None:
+        return default
+    return value.strip().lower() in {"1", "true", "yes", "on"}
+
+
+# Placeholder requirement map for model families this service expects to exist in MLflow.
+REQUIRED_BASE_MODELS: dict[str, list[str]] = {
+    "semantic_segmentation": ["base_unet"],
+}
+
+# If true, missing required model entries are created as placeholders.
+REGISTRY_CREATE_MISSING = _env_bool("REGISTRY_CREATE_MISSING", False)
+
+# If true and create-missing is disabled, registration fails when required entries are missing.
+REGISTRY_ENFORCE_REQUIRED = _env_bool("REGISTRY_ENFORCE_REQUIRED", True)
+
+
 @dataclass(frozen=True)
 class Backend:
     """Resolved backend configuration bound to an authentication token."""

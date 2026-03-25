@@ -6,8 +6,6 @@ from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.state import MODEL_REGISTRY
-from models.register_models import register_models
 from paths import SERVICE_NAME, SERVICE_DESCRIPTION, ALLOWED_ORIGINS
 
 # Router imports
@@ -27,8 +25,6 @@ logger.setLevel(DEBUG)
 async def lifespan(app: FastAPI):
     # Startup code
     logger.debug("Starting up the Prompted Segmentation Service")
-    logger.debug("Registering models in the MODEL_REGISTRY")
-    register_models(MODEL_REGISTRY)
     logger.debug("Celery initialized")
     yield
     # Shutdown code
