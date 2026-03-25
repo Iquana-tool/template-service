@@ -1,4 +1,3 @@
-from util.image_cache import ImageCache
 import os
 import logging
 import secrets

@@ -4,7 +4,7 @@ from celery.result import AsyncResult
 from fastapi import APIRouter, Body, Depends, HTTPException
 
 from app.dependencies import get_current_backend
-from app.state import Backend, TRAINING_TASKS
+from app.state import Backend
 from app.tasks import train_model
 
 logger = logging.getLogger(__name__)
@@ -25,11 +25,6 @@ async def start_training(
             request.get("params", {}),
             backend.mlflow_tracking_uri,
         )
-        TRAINING_TASKS[task.id] = {
-            "task": task,
-            "backend_token": backend.token,
-            "celery_broker_url": backend.celery_broker_url,
-        }
         return {"task_id": task.id}
     except AttributeError as exc:
         logger.error("Training request schema mismatch: %s", exc)
