@@ -16,12 +16,6 @@ def _env_bool(name: str, default: bool) -> bool:
         return default
     return value.strip().lower() in {"1", "true", "yes", "on"}
 
-
-# Placeholder requirement map for model families this service expects to exist in MLflow.
-REQUIRED_BASE_MODELS: dict[str, list[str]] = {
-    "semantic_segmentation": ["base_unet"],
-}
-
 # If true, missing required model entries are created as placeholders.
 REGISTRY_CREATE_MISSING = _env_bool("REGISTRY_CREATE_MISSING", False)
 

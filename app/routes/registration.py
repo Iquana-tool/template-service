@@ -2,13 +2,13 @@ from fastapi import APIRouter, HTTPException
 from iquana_toolbox.schemas.networking.http.services import ServiceRegistrationRequest, ServiceRegistrationResponse
 from app.mlflow_registry import ensure_required_registry_models
 from app.state import (
-    REQUIRED_BASE_MODELS,
     REGISTRY_CREATE_MISSING,
     REGISTRY_ENFORCE_REQUIRED,
     update_celery_config,
     verify_registration_token,
     register_backend,
 )
+from models import REQUIRED_BASE_MODELS
 import logging
 import uuid
 
