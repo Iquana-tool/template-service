@@ -1,5 +1,4 @@
 from celery_app import app
-from models.model_registry import ModelInfo
 import logging
 import mlflow
 import mlflow.pytorch  # Assuming PyTorch models; adjust for other frameworks
