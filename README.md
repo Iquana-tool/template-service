@@ -17,6 +17,109 @@ uv pip install numpy
 ````
 > [!TIP]
 > If you need more complex setup options like installing from a repo, consider dockerizing.
+
+For AI training features, ensure Redis is running (default broker). Start Celery workers with: `celery -A celery_app worker --loglevel=info`. Monitor tasks with Flower: `celery -A celery_app flower`.
+
+MLFlow is used for model registry. By default, it uses a local SQLite database. For production, configure a remote tracking server.
+
+## Service Registration
+This service can be dynamically registered with a main backend. The main backend sends configuration via a POST request to `/register` with the following:
+
+```json
+{
+  "backend_url": "http://main-backend:8000",
+  "celery_broker_url": "redis://celery-host:6379/0",
+  "mlflow_tracking_uri": "http://mlflow-host:5000",
+  "registration_token": "your-secret-token",
+  "service_name": "segmentation-service",
+  "api_key": "optional-api-key"
+}
+```
+
+### Setting up Registration
+
+1. **Before starting the service**, set the registration token (must match the token sent by the backend):
+   ```bash
+   export SERVICE_REGISTRATION_TOKEN="your-secret-token"
+   ```
+   If not set, defaults to `SERVICE_SECRET` env var, or `"default-secret"` as fallback.
+
+2. **Start the service**:
+   ```bash
+   uv run fastapi run main.py
+   ```
+
+3. **From the main backend**, call the registration endpoint:
+   ```python
+   import requests
+   
+   response = requests.post(
+       "http://service-ip:8000/register",
+       json={
+           "backend_url": "http://main-backend:8000",
+           "celery_broker_url": "redis://celery-host:6379/0",
+           "mlflow_tracking_uri": "http://mlflow-host:5000",
+           "registration_token": "your-secret-token",
+           "api_key": "optional-service-api-key"
+       }
+   )
+   print(response.json())
+   ```
+
+See [examples/registration_client.py](examples/registration_client.py) for a complete example.
+
+### How Registration Works
+
+1. Backend sends registration request with Celery broker and MLFlow tracking URIs
+2. Service validates the registration token
+3. Service dynamically configures Celery to use the provided broker
+4. Service dynamically configures MLFlow to use the provided tracking server
+5. If an API key is provided, it's stored and subsequently required for all requests
+6. Service returns a unique service_id for identification
+
+## Authentication
+
+Two authentication methods are implemented:
+
+### 1. Registration Token
+- **When**: During service registration (`POST /register`)
+- **How**: 
+  - Set on service startup via `SERVICE_REGISTRATION_TOKEN` env var
+  - Backend includes token in registration request
+  - Service validates and stores the token
+  - Defined in `app/state.py`
+
+### 2. API Key (Optional)
+- **When**: After registration, on all subsequent requests (unless registration disabled it)
+- **How**:
+  - Set during registration request (optional)
+  - Stored in service state after registration
+  - Include in requests via `X-API-Key` header
+  - Example:
+    ```bash
+    curl -H "X-API-Key: your-api-key" http://service:8000/get_available_models
+    ```
+
+### Authentication Flow Diagram
+```
+1. Service starts (waiting for registration)
+   ↓
+2. Backend sends registration request with token
+   ↓
+3. Service validates token → Stores configuration
+   ↓
+4. If API key provided → Service requires it in all future requests
+   ↓
+5. Requests without valid API key are rejected (if configured)
+```
+
+### Security Recommendations
+- Use strong registration tokens (e.g., long random strings)
+- Set `SERVICE_REGISTRATION_TOKEN` at service startup, not in code
+- Rotate API keys periodically
+- Use HTTPS for all service communication in production
+- Keep MLFlow and Redis ports behind firewalls
+- Consider network segmentation for service-to-backend communication
 ## Structure
 This template services uses [FastAPI](https://fastapi.tiangolo.com) for routing and managing HTTP endpoints. FastAPI is a modern, fast (high-performance), web framework for building APIs with Python based on standard Python type hints.
 You can see the docs, when you run the API:
@@ -60,7 +163,21 @@ Before you run inference you need to select a model, which you want to use. This
 - `list_models`: Get a list of all available (and loadable) models. This is important for the main API to give the user a list of possible models.
 - `load_model`: Load a model into the model cache, such that the user can later on use it.
 #### Model Registry
-There is a model registry, which is initialized on startup. You can register models to the register by editing the [registration function](models/register_models.py). 
-Each model has a loader component and an info component. The loader is responsible for correctly loading the model into memory. The info component just holds some information about the model.
+The service now uses MLFlow for model management, including registration, versioning, and staging. Models are tracked with experiments, runs, and metadata. You can register models by editing the [registration function](models/register_models.py). 
+
+Each model has metadata like name, description, tags, and training config. MLFlow handles loading and caching automatically.
 ### Inference
 If image and model are selected and loaded, you can run inference. This endpoint does not come with predefined functionality. You need to implement it yourself!
+### Training
+For AI training, the service now supports asynchronous model training using Celery for background task processing.
+1. Upload a dataset (similar to images).
+2. Select a model with training support.
+3. Start training with parameters (e.g., epochs, learning rate).
+4. Monitor progress and retrieve results.
+
+Endpoints:
+- `POST /annotation_session/train`: Start a training job (returns task ID).
+- `GET /annotation_session/train/{task_id}`: Check training status/progress.
+- `DELETE /annotation_session/train/{task_id}`: Cancel a training job.
+
+Training uses Celery workers for scalability. Run workers with: `celery -A celery_app worker --loglevel=info`. Monitor with Flower: `celery -A celery_app flower`.

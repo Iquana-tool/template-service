@@ -1,16 +1,14 @@
-from fastapi import status, HTTPException, Response
-
-from app.schemas.inference import Request
-from app.state import MODEL_CACHE, IMAGE_CACHE, MODEL_REGISTRY
-from models.base_models import BaseModel
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
+from app.dependencies import get_current_backend
+from app.state import Backend
+from iquana_toolbox.schemas.networking.http.services import BaseImageRequest
 
 
 router = APIRouter()
-session_router = APIRouter(prefix="/annotation_session", tags=["annotation_session"])
 
-@session_router.post("/inference")
-async def inference(request: Request):
-    """ Your inference endpoint. Adapt this to the desired service logic. """
-    pass
+@router.post("/inference")
+async def inference(request: BaseImageRequest, backend: Backend = Depends(get_current_backend)):
+    """ Load a model from mlflow registry and perform inference on the provided image. This is a placeholder implementation. The actual logic will depend on the model and inference requirements."""
+    # Example: model = backend.model_registry.load_model(request.model_id)
+    raise NotImplementedError("Inference endpoint not implemented yet")
 
