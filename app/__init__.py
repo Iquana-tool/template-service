@@ -12,10 +12,6 @@ from paths import SERVICE_NAME, SERVICE_DESCRIPTION, ALLOWED_ORIGINS
 from app.routes import router as health_router
 from app.routes.inference import router as inference_router
 from app.routes.training import router as training_router
-from app.routes.registration import router as registration_router
-
-# Middleware imports
-from app.middleware import AuthenticationMiddleware
 
 logger = getLogger(__name__)
 logger.setLevel(DEBUG)
@@ -52,12 +48,8 @@ def create_app():
         allow_headers=["*"],
     )
 
-    # Add authentication middleware
-    app.add_middleware(AuthenticationMiddleware)
-
     # Include the routers
     app.include_router(health_router)
-    app.include_router(registration_router)  # Registration must be early
     app.include_router(inference_router)
     app.include_router(training_router)
 
